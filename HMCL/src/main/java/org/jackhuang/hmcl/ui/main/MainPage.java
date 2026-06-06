@@ -164,15 +164,10 @@ public final class MainPage extends StackPane implements DecoratorPage {
             getChildren().add(announcementPane);
         }
 
+        // ================== 禁用更新气泡 UI ==================
         updatePane = new StackPane();
-        updatePane.setVisible(false);
-        updatePane.getStyleClass().add("bubble");
-        FXUtils.setLimitWidth(updatePane, 230);
-        FXUtils.setLimitHeight(updatePane, 55);
-        StackPane.setAlignment(updatePane, Pos.TOP_RIGHT);
-        FXUtils.onClicked(updatePane, this::onUpgrade);
-        updatePane.setCursor(Cursor.HAND);
-        FXUtils.onChange(showUpdateProperty(), this::showUpdate);
+        updatePane.setVisible(false); // 永久隐藏
+        // ================== 禁用更新气泡 UI ==================
 
         {
             HBox hBox = new HBox();
@@ -226,10 +221,15 @@ public final class MainPage extends StackPane implements DecoratorPage {
                     @Override
                     public void accept(String currentGame) {
                         if (currentGame == null) {
+                            // ================== 禁用无版本时自动下载 ==================
                             launchLabel.setText(i18n("version.launch.empty"));
                             currentLabel.setText(null);
                             graphic.getChildren().setAll(launchLabel);
-                            FXUtils.setOnActionWithCooldown(launchButton, MainPage.this::launchNoGame);
+                            // 移除点击下载逻辑
+                            FXUtils.setOnActionWithCooldown(launchButton, () -> {
+                                Controllers.showToast("请联系管理员安装游戏版本");
+                            });
+                            // ================== 禁用无版本时自动下载 ==================
                             if (tooltip == null)
                                 tooltip = new Tooltip(i18n("version.launch.empty.tooltip"));
                             FXUtils.installFastTooltip(launchButton, tooltip);
@@ -272,43 +272,22 @@ public final class MainPage extends StackPane implements DecoratorPage {
             launchPane.getChildren().setAll(launchButton, menuButton);
         }
 
-        getChildren().addAll(updatePane, launchPane);
-
+        // ================== 彻底移除更新面板，不显示 ==================
+        // getChildren().addAll(updatePane, launchPane);
+        getChildren().addAll(launchPane);
+        // ================== 彻底移除更新面板，不显示 ==================
     }
 
     private void showUpdate(boolean show) {
-        doAnimation(show);
-
-        if (show && !config().isDisableAutoShowUpdateDialog()
-                && getLatestVersion() != null
-                && !Objects.equals(config().getPromptedVersion(), getLatestVersion().version())) {
-            Controllers.dialog(new MessageDialogPane.Builder("", i18n("update.bubble.title", getLatestVersion().version()), MessageDialogPane.MessageType.INFO)
-                    .addAction(i18n("button.view"), () -> {
-                        config().setPromptedVersion(getLatestVersion().version());
-                        onUpgrade();
-                    })
-                    .addCancel(null)
-                    .build());
-        }
+        // ================== 禁用更新弹窗、更新提示 ==================
+        // 空实现：保留逻辑，不显示任何UI
+        // ================== 禁用更新弹窗、更新提示 ==================
     }
 
     private void doAnimation(boolean show) {
-        if (AnimationUtils.isAnimationEnabled()) {
-            Duration duration = Duration.millis(320);
-            Timeline nowAnimation = new Timeline();
-            nowAnimation.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO,
-                            new KeyValue(updatePane.translateXProperty(), show ? 260 : 0, SINE)),
-                    new KeyFrame(duration,
-                            new KeyValue(updatePane.translateXProperty(), show ? 0 : 260, SINE)));
-            if (show) nowAnimation.getKeyFrames().add(
-                    new KeyFrame(Duration.ZERO, e -> updatePane.setVisible(true)));
-            else nowAnimation.getKeyFrames().add(
-                    new KeyFrame(duration, e -> updatePane.setVisible(false)));
-            nowAnimation.play();
-        } else {
-            updatePane.setVisible(show);
-        }
+        // ================== 禁用更新动画 ==================
+        // 空实现
+        // ================== 禁用更新动画 ==================
     }
 
     private void launch() {
@@ -356,11 +335,9 @@ public final class MainPage extends StackPane implements DecoratorPage {
     }
 
     private void onUpgrade() {
-        RemoteVersion target = UpdateChecker.getLatestVersion();
-        if (target == null) {
-            return;
-        }
-        UpdateHandler.updateFrom(target);
+        // ================== 禁用手动点击更新 ==================
+        // 空实现：点击更新气泡无任何反应
+        // ================== 禁用手动点击更新 ==================
     }
 
     private void closeUpdateBubble() {
