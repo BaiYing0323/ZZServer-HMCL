@@ -83,7 +83,6 @@ jobs:
       - name: 生成 Release 说明
         if: ${{ env.continue == 'true' }}
         run: |
-          echo "&nbsp;**[Changelog](https://docs.hmcl.net/changelog/${{ matrix.channel }}.html#HMCL-$HMCL_VERSION)**" >> RELEASE_NOTE
           echo "" >> RELEASE_NOTE
           echo "| File | SHA-256 Checksum |"  >> RELEASE_NOTE
           echo "| ---  | --- |" >> RELEASE_NOTE
