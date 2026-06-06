@@ -93,7 +93,7 @@ if [ -n "${HMCL_JAVA_HOME+x}" ]; then
     exec "$HMCL_JAVA_HOME/bin/$_HMCL_JAVA_EXE_NAME" $_HMCL_VM_OPTIONS -jar "$_HMCL_PATH"
   else
     if [ "$_HMCL_USE_CHINESE" == true ]; then
-      show_warning "错误" "环境变量 HMCL_JAVA_HOME 的值无效，请设置为合法的 Java 路径。\n你可以访问 https://docs.hmcl.net/help.html 页面寻求帮助。"
+      show_warning "错误" "环境变量 HMCL_JAVA_HOME 的值无效，请设置为合法的 Java 路径。"
     else
       show_warning "Error" "The value of the environment variable HMCL_JAVA_HOME is invalid, please set it to a valid Java path.\nYou can visit the https://docs.hmcl.net/help.html page for help."
     fi

@@ -119,7 +119,7 @@ jobs:
             "HMCL-${{ env.HMCL_VERSION }}.jar" \
             "HMCL-${{ env.HMCL_VERSION }}.sh" \
             "HMCL-${{ env.HMCL_VERSION }}.deb" \
-            --target "${{ env.HMCL_COMMIT_SHA }}" \
+            --target "${{ github.sha }}" \
             --title "${{ env.RELEASE_TITLE }}" \
             --notes-file RELEASE_NOTE \
             --prerelease=${{ env.PRERELEASE }}
