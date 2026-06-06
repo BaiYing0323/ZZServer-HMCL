@@ -25,8 +25,8 @@ jobs:
         cache-cleanup: never
     - name: Build with Gradle
       run: |
-           chmod +x 
-           ./gradlew./gradlew build --no-daemon --parallel
+           chmod +x ./gradlew
+           ./gradlew build --no-daemon --parallel
       env:
         MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
         CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
