@@ -51,19 +51,35 @@ public final class AboutPage extends SpinnerPane {
 
         ComponentList about = new ComponentList();
         {
+            // 原版HMCL，launcher
             var launcher = LineButton.createExternalLinkButton(Metadata.PUBLISH_URL);
             launcher.setLargeTitle(true);
-            launcher.setLeading(FXUtils.newBuiltinImage("/assets/img/icon.png"));
+            launcher.setLeading(FXUtils.newBuiltinImage("/assets/img/icon-hmcl.png"));
             launcher.setTitle("Hello Minecraft! Launcher");
-            launcher.setSubtitle(Metadata.VERSION);
+            launcher.setSubtitle("基于" + Metadata.VERSION + "开源版本二次开发");
 
+            // ZZ客户端，client
+            var client = LineButton.createExternalLinkButton("https://www.pillowdream.cn/zzserver/client/");
+            client.setLargeTitle(true);
+            client.setLeading(FXUtils.newBuiltinImage("/assets/img/icon.png"));
+            client.setTitle("ZZServer Player Client");
+            client.setSubtitle(Metadata.VERSION);
+
+            // 原作者
             var author = LineButton.createExternalLinkButton("https://space.bilibili.com/1445341");
             author.setLargeTitle(true);
             author.setLeading(FXUtils.newBuiltinImage("/assets/img/yellow_fish.png"));
             author.setTitle("huanghongxun");
             author.setSubtitle(i18n("about.author.statement"));
 
-            about.getContent().setAll(launcher, author);
+            // 白莹，改名baiYing
+            var baiYing = LineButton.createExternalLinkButton("https://space.bilibili.com/1730225303");
+            baiYing.setLargeTitle(true);
+            baiYing.setLeading(FXUtils.newBuiltinImage("/assets/img/baiying-tx.png"));
+            baiYing.setTitle("BaiYing0323");
+
+            // 添加全部按钮
+            about.getContent().setAll(launcher, client, author, baiYing);
         }
 
         ComponentList thanks = loadIconedTwoLineList("/assets/about/thanks.json");
@@ -119,6 +135,8 @@ public final class AboutPage extends SpinnerPane {
 
         try {
             JsonArray array = JsonUtils.fromJsonFully(input, JsonArray.class);
+            // 判空消除array空指针警告
+            if(array == null) return componentList;
 
             for (JsonElement element : array) {
                 JsonObject obj = element.getAsJsonObject();
@@ -161,6 +179,10 @@ public final class AboutPage extends SpinnerPane {
             }
         } catch (IOException | JsonParseException e) {
             LOG.warning("Failed to load list: " + path, e);
+        }finally {
+            try {
+                input.close();
+            } catch (IOException ignored) {}
         }
 
         return componentList;

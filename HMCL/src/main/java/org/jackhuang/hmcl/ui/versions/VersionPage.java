@@ -101,7 +101,7 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
                     schematicsTab.getNode().loadVersion(getProfile(), getVersion());
             }
         });
-        
+
         listenerHolder.add(EventBus.EVENT_BUS.channel(RefreshedVersionsEvent.class).registerWeak(event -> checkSelectedVersion(), EventPriority.HIGHEST));
     }
 
@@ -140,8 +140,6 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
     }
 
     public void loadVersion(String version, Profile profile) {
-        // If we jumped to game list page and deleted this version
-        // and back to this page, we should return to main page.
         if (this.version.get() != null && (!getProfile().getRepository().isLoaded() ||
                 !getProfile().getRepository().hasVersion(version))) {
             Platform.runLater(() -> fireEvent(new PageCloseEvent()));
@@ -163,15 +161,13 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
             worldListTab.getNode().loadVersion(profile, version);
         if (schematicsTab.isInitialized())
             schematicsTab.getNode().loadVersion(profile, version);
-        currentVersionUpgradable.set(profile.getRepository().isModpack(version));
+        currentVersionUpgradable.set(false);
     }
 
     private void onNavigated(Navigator.NavigationEvent event) {
         if (this.version.get() == null)
             throw new IllegalStateException();
 
-        // If we jumped to game list page and deleted this version
-        // and back to this page, we should return to main page.
         if (!getProfile().getRepository().isLoaded() ||
                 !getProfile().getRepository().hasVersion(getVersion())) {
             Platform.runLater(() -> fireEvent(new PageCloseEvent()));
@@ -179,10 +175,6 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
         }
 
         loadVersion(getVersion(), getProfile());
-    }
-
-    private void onBrowse(String sub) {
-        FXUtils.openFolder(getProfile().getRepository().getRunDirectory(getVersion()).resolve(sub));
     }
 
     private void redownloadAssetIndex() {
@@ -224,33 +216,8 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
         Versions.cleanVersion(getProfile(), getVersion());
     }
 
-    private void testGame() {
-        Versions.testGame(getProfile(), getVersion());
-    }
-
     private void updateGame() {
-        Versions.updateVersion(getProfile(), getVersion());
-    }
-
-    private void generateLaunchScript() {
-        Versions.generateLaunchScript(getProfile(), getVersion());
-    }
-
-    private void export() {
-        Versions.exportVersion(getProfile(), getVersion());
-    }
-
-    private void rename() {
-        Versions.renameVersion(getProfile(), getVersion())
-                .thenApply(newVersionName -> this.preferredVersionName = newVersionName);
-    }
-
-    private void remove() {
-        Versions.deleteVersion(getProfile(), getVersion());
-    }
-
-    private void duplicate() {
-        Versions.duplicateVersion(getProfile(), getVersion());
+        // 禁用更新
     }
 
     public Profile getProfile() {
@@ -272,12 +239,6 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
     }
 
     public static class Skin extends DecoratorAnimatedPageSkin<VersionPage> {
-
-        /**
-         * Constructor for all SkinBase instances.
-         *
-         * @param control The control for which this Skin should attach to.
-         */
         protected Skin(VersionPage control) {
             super(control);
 
@@ -291,31 +252,9 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
                         .addNavigationDrawerTab(control.tab, control.schematicsTab, i18n("schematics.manage"), SVG.SCHEMA, SVG.SCHEMA_FILL);
                 VBox.setVgrow(sideBar, Priority.ALWAYS);
 
-                PopupMenu browseList = new PopupMenu();
-                JFXPopup browsePopup = new JFXPopup(browseList);
-                browseList.getContent().setAll(
-                        new IconedMenuItem(SVG.STADIA_CONTROLLER, i18n("folder.game"), () -> control.onBrowse(""), browsePopup),
-                        new IconedMenuItem(SVG.EXTENSION, i18n("folder.mod"), () -> control.onBrowse("mods"), browsePopup),
-                        new IconedMenuItem(SVG.TEXTURE, i18n("folder.resourcepacks"), () -> control.onBrowse("resourcepacks"), browsePopup),
-                        new IconedMenuItem(SVG.PUBLIC, i18n("folder.saves"), () -> control.onBrowse("saves"), browsePopup),
-                        new IconedMenuItem(SVG.SCHEMA, i18n("folder.schematics"), () -> control.onBrowse("schematics"), browsePopup),
-                        new IconedMenuItem(SVG.WB_SUNNY, i18n("folder.shaderpacks"), () -> control.onBrowse("shaderpacks"), browsePopup),
-                        new IconedMenuItem(SVG.SCREENSHOT_MONITOR, i18n("folder.screenshots"), () -> control.onBrowse("screenshots"), browsePopup),
-                        new IconedMenuItem(SVG.SETTINGS, i18n("folder.config"), () -> control.onBrowse("config"), browsePopup),
-                        new IconedMenuItem(SVG.SCRIPT, i18n("folder.logs"), () -> control.onBrowse("logs"), browsePopup),
-                        new IconedMenuItem(SVG.FRAME_BUG, i18n("folder.crash-reports"), () -> control.onBrowse("crash-reports"), browsePopup)
-                );
-
                 PopupMenu managementList = new PopupMenu();
                 JFXPopup managementPopup = new JFXPopup(managementList);
                 managementList.getContent().setAll(
-                        new IconedMenuItem(SVG.ROCKET_LAUNCH, i18n("version.launch.test"), control::testGame, managementPopup),
-                        new IconedMenuItem(SVG.SCRIPT, i18n("version.launch_script"), control::generateLaunchScript, managementPopup),
-                        new MenuSeparator(),
-                        new IconedMenuItem(SVG.EDIT, i18n("version.manage.rename"), control::rename, managementPopup),
-                        new IconedMenuItem(SVG.FOLDER_COPY, i18n("version.manage.duplicate"), control::duplicate, managementPopup),
-                        new IconedMenuItem(SVG.DELETE, i18n("version.manage.remove"), control::remove, managementPopup),
-                        new IconedMenuItem(SVG.OUTPUT, i18n("modpack.export"), control::export, managementPopup),
                         new MenuSeparator(),
                         new IconedMenuItem(null, i18n("version.manage.redownload_assets_index"), control::redownloadAssetIndex, managementPopup),
                         new IconedMenuItem(null, i18n("version.manage.remove_assets"), control::clearAssets, managementPopup),
@@ -324,13 +263,6 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
                 );
 
                 AdvancedListBox toolbar = new AdvancedListBox()
-                        .addNavigationDrawerItem(i18n("version.update"), SVG.UPDATE, control::updateGame, upgradeItem -> {
-                            upgradeItem.visibleProperty().bind(control.currentVersionUpgradable);
-                        })
-                        .addNavigationDrawerItem(i18n("version.launch.test"), SVG.ROCKET_LAUNCH, control::testGame)
-                        .addNavigationDrawerItem(i18n("settings.game.exploration"), SVG.FOLDER_OPEN, null, browseMenuItem -> {
-                            browseMenuItem.setOnAction(e -> browsePopup.show(browseMenuItem, JFXPopup.PopupVPosition.BOTTOM, JFXPopup.PopupHPosition.LEFT, browseMenuItem.getWidth(), 0));
-                        })
                         .addNavigationDrawerItem(i18n("settings.game.management"), SVG.MENU, null, managementItem -> {
                             managementItem.setOnAction(e -> managementPopup.show(managementItem, JFXPopup.PopupVPosition.BOTTOM, JFXPopup.PopupHPosition.LEFT, managementItem.getWidth(), 0));
                         });
@@ -344,8 +276,6 @@ public class VersionPage extends DecoratorAnimatedPage implements DecoratorPage 
                             State.fromTitle(i18n("version.manage.manage.title", getSkinnable().getVersion()), -1),
                     getSkinnable().version));
 
-            //control.transitionPane.getStyleClass().add("gray-background");
-            //FXUtils.setOverflowHidden(control.transitionPane, 8);
             setCenter(control.transitionPane);
         }
     }

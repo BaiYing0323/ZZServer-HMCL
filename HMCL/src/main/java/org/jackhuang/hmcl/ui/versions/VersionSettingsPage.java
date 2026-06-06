@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program.  If, see <https://www.gnu.org/licenses/>.
  */
 package org.jackhuang.hmcl.ui.versions;
 
@@ -69,8 +69,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
     private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(new State("", null, false, false, false));
 
-    private AdvancedVersionSettingPage advancedVersionSettingPage;
-
     private VersionSetting lastVersionSetting = null;
     private Profile profile;
     private WeakListenerHolder listenerHolder;
@@ -78,9 +76,7 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
     private final VBox rootPane;
     private final JFXComboBox<String> cboWindowsSize;
-    private final JFXTextField txtServerIP;
     private final ComponentList componentList;
-    private final LineSelectButton<LauncherVisibility> launcherVisibilityPane;
     private final JFXCheckBox chkAutoAllocate;
     private final JFXCheckBox chkFullscreen;
     private final ComponentSublist javaSublist;
@@ -88,22 +84,14 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
     private final MultiFileItem.Option<Pair<JavaVersionType, JavaRuntime>> javaAutoDeterminedOption;
     private final MultiFileItem.StringOption<Pair<JavaVersionType, JavaRuntime>> javaVersionOption;
     private final MultiFileItem.FileOption<Pair<JavaVersionType, JavaRuntime>> javaCustomOption;
-
-    private final ComponentSublist gameDirSublist;
-    private final MultiFileItem<GameDirectoryType> gameDirItem;
-    private final MultiFileItem.FileOption<GameDirectoryType> gameDirCustomOption;
     private final LineSelectButton<ProcessPriority> processPriorityPane;
     private final LineToggleButton showLogsPane;
     private final LineToggleButton enableDebugLogOutputPane;
-    private final ImagePickerItem iconPickerItem;
 
     private final ChangeListener<Collection<JavaRuntime>> javaListChangeListener;
     private final InvalidationListener usesGlobalListener;
     private final ChangeListener<Boolean> specificSettingsListener;
     private final InvalidationListener javaListener = any -> initJavaSubtitle();
-
-    private final ChangeListener<GameDirectoryType> gameDirTypeListener = (ob, o, n) -> fireWorkingDirChanged();
-    private final ChangeListener<String> gameDirListener = (ob, o, n) -> fireWorkingDirChanged();
 
     private boolean updatingJavaSetting = false;
     private boolean updatingSelectedJava = false;
@@ -140,24 +128,8 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             specificSettingsHint.managedProperty().bind(navigateToSpecificSettings);
             specificSettingsHint.visibleProperty().bind(navigateToSpecificSettings);
 
-            iconPickerItem = null;
-
             rootPane.getChildren().addAll(specificSettingsHint);
         } else {
-            HintPane gameDirHint = new HintPane(MessageDialogPane.MessageType.INFO);
-            gameDirHint.setText(i18n("settings.game.working_directory.hint"));
-            rootPane.getChildren().add(gameDirHint);
-
-            ComponentList iconPickerItemWrapper = new ComponentList();
-            rootPane.getChildren().add(iconPickerItemWrapper);
-
-            iconPickerItem = new ImagePickerItem();
-            iconPickerItem.setImage(FXUtils.newBuiltinImage("/assets/img/icon.png"));
-            iconPickerItem.setTitle(i18n("settings.icon"));
-            iconPickerItem.setOnSelectButtonClicked(e -> onExploreIcon());
-            iconPickerItem.setOnDeleteButtonClicked(e -> onDeleteIcon());
-            iconPickerItemWrapper.getContent().setAll(iconPickerItem);
-
             BorderPane settingsTypePane = new BorderPane();
             settingsTypePane.disableProperty().bind(modpack);
             rootPane.getChildren().add(settingsTypePane);
@@ -177,22 +149,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
         {
             componentList = new ComponentList();
-
-            if (!globalSetting) {
-                var copyGlobalButton = LineButton.createNavigationButton();
-                copyGlobalButton.setTitle(i18n("settings.game.copy_global"));
-                copyGlobalButton.setOnAction(event ->
-                        Controllers.confirm(i18n("settings.game.copy_global.copy_all.confirm"), null, () -> {
-                            Set<String> ignored = new HashSet<>(Arrays.asList(
-                                    "usesGlobal",
-                                    "versionIcon"
-                            ));
-
-                            PropertyUtils.copyProperties(profile.getGlobal(), lastVersionSetting, name -> !ignored.contains(name));
-                        }, null));
-
-                componentList.getContent().add(copyGlobalButton);
-            }
 
             javaItem = new MultiFileItem<>();
             javaSublist = new ComponentSublist();
@@ -231,22 +187,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
                 initializeSelectedJava();
             });
 
-            gameDirItem = new MultiFileItem<>();
-            gameDirSublist = new ComponentSublist();
-            gameDirSublist.getContent().add(gameDirItem);
-            gameDirSublist.setTitle(i18n("settings.game.working_directory"));
-            gameDirSublist.setHasSubtitle(versionId != null);
-            gameDirItem.disableProperty().bind(modpack);
-            gameDirCustomOption = new MultiFileItem.FileOption<>(i18n("settings.custom"), GameDirectoryType.CUSTOM)
-                    .setChooserTitle(i18n("settings.game.working_directory.choose"))
-                    .setSelectionMode(FileSelector.SelectionMode.DIRECTORY);
-
-            gameDirItem.loadChildren(Arrays.asList(
-                    new MultiFileItem.Option<>(i18n("settings.advanced.game_dir.default"), GameDirectoryType.ROOT_FOLDER),
-                    new MultiFileItem.Option<>(i18n("settings.advanced.game_dir.independent"), GameDirectoryType.VERSION_FOLDER),
-                    gameDirCustomOption
-            ));
-
             VBox maxMemoryPane = new VBox(8);
             {
                 Label title = new Label(i18n("settings.memory"));
@@ -256,7 +196,7 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
                 VBox.setMargin(chkAutoAllocate, new Insets(0, 0, 8, 5));
 
                 HBox lowerBoundPane = new HBox(8);
-                lowerBoundPane.setStyle("-fx-view-order: -1;"); // prevent the indicator from being covered by the progress bar
+                lowerBoundPane.setStyle("-fx-view-order: -1;");
                 lowerBoundPane.setAlignment(Pos.CENTER);
                 VBox.setMargin(lowerBoundPane, new Insets(0, 0, 0, 16));
                 {
@@ -333,11 +273,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
                 maxMemoryPane.getChildren().setAll(title, chkAutoAllocate, lowerBoundPane, memoryStatusBar, digitalPane);
             }
 
-            launcherVisibilityPane = new LineSelectButton<>();
-            launcherVisibilityPane.setTitle(i18n("settings.advanced.launcher_visible"));
-            launcherVisibilityPane.setItems(LauncherVisibility.values());
-            launcherVisibilityPane.setNullSafeConverter(e -> i18n("settings.advanced.launcher_visibility." + e.name().toLowerCase(Locale.ROOT)));
-
             BorderPane dimensionPane = new BorderPane();
             {
                 Label label = new Label(i18n("settings.game.dimension"));
@@ -379,55 +314,13 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             });
             processPriorityPane.setItems(ProcessPriority.values());
 
-            GridPane serverPane = new GridPane();
-            {
-                ColumnConstraints title = new ColumnConstraints();
-                ColumnConstraints value = new ColumnConstraints();
-                value.setFillWidth(true);
-                value.setHgrow(Priority.ALWAYS);
-                value.setHalignment(HPos.RIGHT);
-                serverPane.setHgap(16);
-                serverPane.setVgap(8);
-                serverPane.getColumnConstraints().setAll(title, value);
-
-                txtServerIP = new JFXTextField();
-                txtServerIP.setPromptText(i18n("settings.advanced.server_ip.prompt"));
-                Validator.addTo(txtServerIP).accept(str -> {
-                    if (StringUtils.isBlank(str))
-                        return true;
-                    try {
-                        ServerAddress.parse(str);
-                        return true;
-                    } catch (Exception ignored) {
-                        return false;
-                    }
-                });
-                FXUtils.setLimitWidth(txtServerIP, 300);
-                serverPane.addRow(0, new Label(i18n("settings.advanced.server_ip")), txtServerIP);
-            }
-
-            var showAdvancedSettingPane = LineButton.createNavigationButton();
-            showAdvancedSettingPane.setTitle(i18n("settings.advanced"));
-            showAdvancedSettingPane.setOnAction(event -> {
-                if (lastVersionSetting != null) {
-                    if (advancedVersionSettingPage == null)
-                        advancedVersionSettingPage = new AdvancedVersionSettingPage(profile, versionId, lastVersionSetting);
-
-                    Controllers.navigateForward(advancedVersionSettingPage);
-                }
-            });
-
             componentList.getContent().addAll(
                     javaSublist,
-                    gameDirSublist,
                     maxMemoryPane,
-                    launcherVisibilityPane,
                     dimensionPane,
                     showLogsPane,
                     enableDebugLogOutputPane,
-                    processPriorityPane,
-                    serverPane,
-                    showAdvancedSettingPane
+                    processPriorityPane
             );
         }
 
@@ -437,9 +330,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
         specificSettingsListener = (a, b, newValue) -> {
             if (versionId == null) return;
 
-            // do not call versionSettings.setUsesGlobal(true/false)
-            // because versionSettings can be the global one.
-            // global versionSettings.usesGlobal is always true.
             if (newValue)
                 profile.getRepository().specializeVersionSetting(versionId);
             else
@@ -447,17 +337,12 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
             FXUtils.runInFX(() -> {
                 loadVersion(profile, versionId);
-                fireWorkingDirChanged();
             });
         };
 
         addEventHandler(Navigator.NavigationEvent.NAVIGATED, this::onDecoratorPageNavigating);
 
         componentList.disableProperty().bind(enableSpecificSettings.not());
-    }
-
-    private void fireWorkingDirChanged() {
-        FXUtils.runInFX(() -> fireEvent(new VersionPage.WorkingDirChangedEvent()));
     }
 
     @Override
@@ -490,18 +375,14 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
         modpack.set(versionId != null && profile.getRepository().isModpack(versionId));
 
-        // unbind data fields
         if (lastVersionSetting != null) {
             FXUtils.unbindWindowsSize(cboWindowsSize, lastVersionSetting.widthProperty(), lastVersionSetting.heightProperty());
             maxMemory.unbindBidirectional(lastVersionSetting.maxMemoryProperty());
             javaCustomOption.valueProperty().unbindBidirectional(lastVersionSetting.javaDirProperty());
-            gameDirCustomOption.valueProperty().unbindBidirectional(lastVersionSetting.gameDirProperty());
-            FXUtils.unbind(txtServerIP, lastVersionSetting.serverIpProperty());
             chkAutoAllocate.selectedProperty().unbindBidirectional(lastVersionSetting.autoMemoryProperty());
             chkFullscreen.selectedProperty().unbindBidirectional(lastVersionSetting.fullscreenProperty());
             showLogsPane.selectedProperty().unbindBidirectional(lastVersionSetting.showLogsProperty());
             enableDebugLogOutputPane.selectedProperty().unbindBidirectional(lastVersionSetting.enableDebugLogOutputProperty());
-            launcherVisibilityPane.valueProperty().unbindBidirectional(lastVersionSetting.launcherVisibilityProperty());
             processPriorityPane.valueProperty().unbindBidirectional(lastVersionSetting.processPriorityProperty());
 
             lastVersionSetting.usesGlobalProperty().removeListener(usesGlobalListener);
@@ -510,36 +391,20 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             lastVersionSetting.defaultJavaPathPropertyProperty().removeListener(javaListener);
             lastVersionSetting.javaVersionProperty().removeListener(javaListener);
 
-            lastVersionSetting.gameDirTypeProperty().removeListener(gameDirTypeListener);
-            lastVersionSetting.gameDirProperty().removeListener(gameDirListener);
-
-            gameDirItem.selectedDataProperty().unbindBidirectional(lastVersionSetting.gameDirTypeProperty());
-            gameDirSublist.subtitleProperty().unbind();
-
             enableSpecificSettings.removeListener(specificSettingsListener);
-
-            if (advancedVersionSettingPage != null) {
-                advancedVersionSettingPage.unbindProperties();
-                advancedVersionSettingPage = null;
-            }
         }
 
-        // unbind data fields
         javaItem.setToggleSelectedListener(null);
         javaVersionOption.valueProperty().unbind();
 
-        // bind new data fields
         FXUtils.bindWindowsSize(cboWindowsSize, versionSetting.widthProperty(), versionSetting.heightProperty());
         maxMemory.bindBidirectional(versionSetting.maxMemoryProperty());
 
         javaCustomOption.bindBidirectional(versionSetting.javaDirProperty());
-        gameDirCustomOption.bindBidirectional(versionSetting.gameDirProperty());
-        FXUtils.bindString(txtServerIP, versionSetting.serverIpProperty());
         chkAutoAllocate.selectedProperty().bindBidirectional(versionSetting.autoMemoryProperty());
         chkFullscreen.selectedProperty().bindBidirectional(versionSetting.fullscreenProperty());
         showLogsPane.selectedProperty().bindBidirectional(versionSetting.showLogsProperty());
         enableDebugLogOutputPane.selectedProperty().bindBidirectional(versionSetting.enableDebugLogOutputProperty());
-        launcherVisibilityPane.valueProperty().bindBidirectional(versionSetting.launcherVisibilityProperty());
         processPriorityPane.valueProperty().bindBidirectional(versionSetting.processPriorityProperty());
 
         if (versionId != null)
@@ -585,18 +450,9 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
         versionSetting.defaultJavaPathPropertyProperty().addListener(javaListener);
         versionSetting.javaVersionProperty().addListener(javaListener);
 
-        gameDirItem.selectedDataProperty().bindBidirectional(versionSetting.gameDirTypeProperty());
-        gameDirSublist.subtitleProperty().bind(Bindings.createStringBinding(() -> profile.getRepository().getRunDirectory(versionId).toAbsolutePath().normalize().toString(),
-                versionSetting.gameDirProperty(), versionSetting.gameDirTypeProperty()));
-
-        versionSetting.gameDirTypeProperty().addListener(gameDirTypeListener);
-        versionSetting.gameDirProperty().addListener(gameDirListener);
-
         lastVersionSetting = versionSetting;
 
         initJavaSubtitle();
-
-        loadIcon();
     }
 
     private void initializeSelectedJava() {
@@ -703,33 +559,6 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
     private void editGlobalSettings() {
         Versions.modifyGlobalSettings(profile);
-    }
-
-    private void onExploreIcon() {
-        if (versionId == null)
-            return;
-
-        Controllers.dialog(new VersionIconDialog(profile, versionId, this::loadIcon));
-    }
-
-    private void onDeleteIcon() {
-        if (versionId == null)
-            return;
-
-        profile.getRepository().deleteIconFile(versionId);
-        VersionSetting localVersionSetting = profile.getRepository().getLocalVersionSettingOrCreate(versionId);
-        if (localVersionSetting != null) {
-            localVersionSetting.setVersionIcon(VersionIconType.DEFAULT);
-        }
-        loadIcon();
-    }
-
-    private void loadIcon() {
-        if (versionId == null) {
-            return;
-        }
-
-        iconPickerItem.setImage(profile.getRepository().getVersionIconImage(versionId));
     }
 
     private static List<String> getSupportedResolutions() {

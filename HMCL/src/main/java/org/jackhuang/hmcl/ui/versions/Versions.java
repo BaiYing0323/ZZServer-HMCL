@@ -64,16 +64,14 @@ public final class Versions {
     private Versions() {
     }
 
+    //【禁用入口：安装新游戏】
     public static void addNewGame() {
-        Controllers.getDownloadPage().showGameDownloads();
-        Controllers.navigate(Controllers.getDownloadPage());
+        return;
     }
 
+    //【禁用入口：安装整合包】
     public static void importModpack() {
-        Profile profile = Profiles.getSelectedProfile();
-        if (profile.getRepository().isLoaded()) {
-            Controllers.getDecorator().startWizard(new ModpackInstallWizardProvider(profile), i18n("install.modpack"));
-        }
+        return;
     }
 
     public static void downloadModpackImpl(DownloadProvider downloadProvider, Profile profile, String version, RemoteMod mod, RemoteMod.Version file) {
@@ -113,53 +111,24 @@ public final class Versions {
         );
     }
 
+    //【禁用：删除版本】
     public static void deleteVersion(Profile profile, String version) {
-        boolean isIndependent = profile.getVersionSetting(version).getGameDirType() == GameDirectoryType.VERSION_FOLDER;
-        String message = isIndependent ? i18n("version.manage.remove.confirm.independent", version) :
-                i18n("version.manage.remove.confirm.trash", version, version + "_removed");
-
-        JFXButton deleteButton = new JFXButton(i18n("button.delete"));
-        deleteButton.getStyleClass().add("dialog-error");
-        deleteButton.setOnAction(e -> {
-            Task.supplyAsync(Schedulers.io(), () -> profile.getRepository().removeVersionFromDisk(version))
-                    .whenComplete(Schedulers.javafx(), (result, exception) -> {
-                        if (exception != null || !Boolean.TRUE.equals(result)) {
-                            Controllers.dialog(i18n("version.manage.remove.failed"), i18n("message.error"), MessageDialogPane.MessageType.ERROR);
-                        }
-                    }).start();
-        });
-
-        Controllers.confirmAction(message, i18n("message.warning"), MessageDialogPane.MessageType.WARNING, deleteButton);
+        return;
     }
 
+    //【禁用：重命名版本】
     public static CompletableFuture<String> renameVersion(Profile profile, String version) {
-        return Controllers.prompt(i18n("version.manage.rename.message"), (newName, handler) -> {
-            if (newName.equals(version)) {
-                handler.resolve();
-                return;
-            }
-            if (profile.getRepository().renameVersion(version, newName)) {
-                handler.resolve();
-                profile.getRepository().refreshVersionsAsync()
-                        .thenRunAsync(Schedulers.javafx(), () -> {
-                            if (profile.getRepository().hasVersion(newName)) {
-                                profile.setSelectedVersion(newName);
-                            }
-                        }).start();
-            } else {
-                handler.reject(i18n("version.manage.rename.fail"));
-            }
-        }, version,
-            new Validator(i18n("install.new_game.malformed"), HMCLGameRepository::isValidVersionId),
-            new Validator(i18n("install.new_game.already_exists"), newVersionName -> !profile.getRepository().versionIdConflicts(newVersionName) || newVersionName.equals(version)));
+        return CompletableFuture.completedFuture(null);
     }
 
+    //【禁用：导出整合包】
     public static void exportVersion(Profile profile, String version) {
-        Controllers.getDecorator().startWizard(new ExportWizardProvider(profile, version), i18n("modpack.wizard"));
+        return;
     }
 
+    //【禁用：打开文件夹】
     public static void openFolder(Profile profile, String version) {
-        FXUtils.openFolder(profile.getRepository().getRunDirectory(version));
+        return;
     }
 
     public static void installFromJson(Profile profile, Path file) {
@@ -199,29 +168,9 @@ public final class Versions {
         }, FileUtils.getNameWithoutExtension(file), new Validator(i18n("install.new_game.malformed"), HMCLGameRepository::isValidVersionId), new Validator(i18n("install.new_game.already_exists"), newVersionName -> !profile.getRepository().versionIdConflicts(newVersionName)));
     }
 
+    //【禁用：复制版本】
     public static void duplicateVersion(Profile profile, String version) {
-        Controllers.prompt(
-                new PromptDialogPane.Builder(i18n("version.manage.duplicate.prompt"), (res, handler) -> {
-                    String newVersionName = ((PromptDialogPane.Builder.StringQuestion) res.get(1)).getValue();
-                    boolean copySaves = ((PromptDialogPane.Builder.BooleanQuestion) res.get(2)).getValue();
-                    Task.runAsync(() -> profile.getRepository().duplicateVersion(version, newVersionName, copySaves))
-                            .thenComposeAsync(profile.getRepository().refreshVersionsAsync())
-                            .whenComplete(Schedulers.javafx(), (result, exception) -> {
-                                if (exception == null) {
-                                    handler.resolve();
-                                } else {
-                                    handler.reject(StringUtils.getStackTrace(exception));
-                                    if (!profile.getRepository().versionIdConflicts(newVersionName)) {
-                                        profile.getRepository().removeVersionFromDisk(newVersionName);
-                                    }
-                                }
-                            }).start();
-                })
-                        .addQuestion(new PromptDialogPane.Builder.HintQuestion(i18n("version.manage.duplicate.confirm")))
-                        .addQuestion(new PromptDialogPane.Builder.StringQuestion(null, version,
-                                new Validator(i18n("install.new_game.malformed"), HMCLGameRepository::isValidVersionId),
-                                new Validator(i18n("install.new_game.already_exists"), newVersionName -> !profile.getRepository().versionIdConflicts(newVersionName))))
-                        .addQuestion(new PromptDialogPane.Builder.BooleanQuestion(i18n("version.manage.duplicate.duplicate_save"), false)));
+        return;
     }
 
     public static void updateVersion(Profile profile, String version) {
@@ -243,39 +192,10 @@ public final class Versions {
         }
     }
 
+    //【禁用：生成启动脚本】
     @SafeVarargs
     public static void generateLaunchScript(Profile profile, String id, Consumer<LauncherHelper>... injecters) {
-        if (!checkVersionForLaunching(profile, id))
-            return;
-        ensureSelectedAccount(account -> {
-            GameRepository repository = profile.getRepository();
-            FileChooser chooser = new FileChooser();
-            if (Files.isDirectory(repository.getRunDirectory(id)))
-                chooser.setInitialDirectory(repository.getRunDirectory(id).toFile());
-            chooser.setTitle(i18n("version.launch_script.save"));
-            if (OperatingSystem.CURRENT_OS == OperatingSystem.MACOS) {
-                chooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter(i18n("extension.command"), "*.command")
-                );
-            }
-            chooser.getExtensionFilters().add(OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS
-                    ? new FileChooser.ExtensionFilter(i18n("extension.bat"), "*.bat")
-                    : new FileChooser.ExtensionFilter(i18n("extension.sh"), "*.sh"));
-            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("extension.ps1"), "*.ps1"));
-            Path file = FileUtils.toPath(chooser.showSaveDialog(Controllers.getStage()));
-            if (file != null) {
-                if (!isValidScriptExtension(FileUtils.getExtension(file))) {
-                    String defaultExt = getDefaultScriptExtension();
-                    file = file.resolveSibling(file.getFileName().toString() + "." + defaultExt);
-                }
-
-                LauncherHelper launcherHelper = new LauncherHelper(profile, account, id);
-                for (Consumer<LauncherHelper> injecter : injecters) {
-                    injecter.accept(launcherHelper);
-                }
-                launcherHelper.makeLaunchScript(file);
-            }
-        });
+        return;
     }
 
     private static boolean isValidScriptExtension(String ext) {
@@ -293,31 +213,25 @@ public final class Versions {
         };
     }
 
+    //【禁用：正式启动游戏】
     @SafeVarargs
     public static void launch(Profile profile, String id, Consumer<LauncherHelper>... injecters) {
-        if (!checkVersionForLaunching(profile, id))
-            return;
-        ensureSelectedAccount(account -> {
-            LauncherHelper launcherHelper = new LauncherHelper(profile, account, id);
-            for (Consumer<LauncherHelper> injecter : injecters) {
-                injecter.accept(launcherHelper);
-            }
-            launcherHelper.launch();
-        });
+        return;
     }
 
+    //【禁用：测试游戏】
     public static void testGame(Profile profile, String id) {
-        launch(profile, id, LauncherHelper::setTestMode);
+        return;
     }
 
+    //【禁用：快捷进入存档启动】
     public static void launchAndEnterWorld(Profile profile, String id, String worldFolderName) {
-        launch(profile, id, launcherHelper ->
-                launcherHelper.setQuickPlayOption(new QuickPlayOption.SinglePlayer(worldFolderName)));
+        return;
     }
 
+    //【禁用：快捷存档脚本】
     public static void generateLaunchScriptForQuickEnterWorld(Profile profile, String id, String worldFolderName) {
-        generateLaunchScript(profile, id, launcherHelper ->
-                launcherHelper.setQuickPlayOption(new QuickPlayOption.SinglePlayer(worldFolderName)));
+        return;
     }
 
     private static boolean checkVersionForLaunching(Profile profile, String id) {
@@ -366,15 +280,14 @@ public final class Versions {
         }
     }
 
+    //【禁用全局游戏设置按钮入口】
     public static void modifyGlobalSettings(Profile profile) {
-        Controllers.getSettingsPage().showGameSettings(profile);
-        Controllers.navigate(Controllers.getSettingsPage());
+        return;
     }
 
     public static void modifyGameSettings(Profile profile, String version) {
         Controllers.getVersionPage().setVersion(version, profile);
         Controllers.getVersionPage().showInstanceSettings();
-        // VersionPage.loadVersion will be invoked after navigation
         Controllers.navigate(Controllers.getVersionPage());
     }
 }

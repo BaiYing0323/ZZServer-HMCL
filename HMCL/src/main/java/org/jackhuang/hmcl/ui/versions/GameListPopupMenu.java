@@ -124,6 +124,7 @@ public final class GameListPopupMenu extends StackPane {
             rootPane.getChildren().setAll(ripplerContainer);
             rootPane.maxWidthProperty().bind(listView.widthProperty().subtract(5));
 
+            // 仅保留【切换版本】功能，移除所有启动/操作相关逻辑
             FXUtils.onClicked(rootPane, () -> {
                 GameItem item = getItem();
                 if (item != null) {
