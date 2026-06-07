@@ -73,3 +73,66 @@ jobs:
           name: ZPCH-${{ env.SHORT_SHA }}-deb
           path: HMCL/build/libs/ZPCH-*.deb
           archive: false
+
+      # 新增：自动发布预发布版 Release
+      - name: Extract version from artifacts
+        id: extract_version
+        run: |
+          # 查找任意一个 ZPCH-*.jar 文件并提取版本号
+          JAR_FILE=$(ls HMCL/build/libs/ZPCH-*.jar 2>/dev/null | head -n 1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "未找到产物文件，跳过发布"
+            exit 0
+          fi
+          # 提取版本号，例如 ZPCH-1.2.3.jar -> 1.2.3
+          VERSION=$(basename "$JAR_FILE" | sed -E 's/^ZPCH-([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?)\.jar$/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "提取到版本号: $VERSION"
+      - name: Check if release exists
+        id: check_release
+        run: |
+          VERSION=${{ steps.extract_version.outputs.version }}
+          if [ -z "$VERSION" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "reason=未提取到有效的版本号" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # 使用 GitHub API 检查该 tag 是否已存在
+          TAG_NAME="v$VERSION"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "reason=Release 版本 v$VERSION 已存在" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          fi
+      - name: Create Prerelease
+        if: steps.check_release.outputs.exists == 'false' && steps.check_release.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check_release.outputs.tag }}
+          name: 测试版 ${{ steps.extract_version.outputs.version }}
+          body: |
+            自动构建的预发布版本
+            - 基于提交: ${{ github.sha }}
+            - 触发分支: ${{ github.ref_name }}
+            - 触发事件: ${{ github.event_name }}
+          prerelease: true
+          draft: false
+          files: |
+            HMCL/build/libs/ZPCH-*.jar
+            HMCL/build/libs/ZPCH-*.exe
+            HMCL/build/libs/ZPCH-*.sh
+            HMCL/build/libs/ZPCH-*.deb
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output skip reason
+        if: steps.check_release.outputs.exists == 'true' || steps.check_release.outputs.skip == 'true'
+        run: |
+          echo "跳过发布: ${{ steps.check_release.outputs.reason }}"
