@@ -32,6 +32,23 @@ jobs:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
       - name: Get short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Rename artifacts
+        run: |
+          cd HMCL/build/libs/
+          for file in ZPCH-*.jar ZPCH-*.exe ZPCH-*.sh ZPCH-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^ZPCH-/ZPCH-/')
+              if [ "$file" != "$newname" ]; then
+                mv "$file" "$newname"
+              fi
+            fi
+          done
+          for file in HMCL-*.jar HMCL-*.exe HMCL-*.sh HMCL-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^HMCL-/ZPCH-/')
+              mv "$file" "$newname"
+            fi
+          done
       - name: Upload JAR
         uses: actions/upload-artifact@v7
         with:
