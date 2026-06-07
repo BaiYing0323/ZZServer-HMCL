@@ -203,7 +203,7 @@ public final class TaskListPane extends StackPane {
                 } else if (task instanceof ServerModpackLocalInstallTask) {
                     task.setName(i18n("install.installing") + ": " + i18n("modpack.type.server"));
                 } else if (task instanceof HMCLModpackInstallTask) {
-                    task.setName(i18n("modpack.installing.given", i18n("modpack.type.hmcl")));
+                    task.setName(i18n("modpack.installing.given", "ModPack"));
                 } else if (task instanceof McbbsModpackExportTask || task instanceof MultiMCModpackExportTask || task instanceof ServerModpackExportTask || task instanceof ModrinthModpackExportTask) {
                     task.setName(i18n("modpack.export"));
                 } else if (task instanceof MinecraftInstanceTask) {
