@@ -30,8 +30,40 @@ jobs:
         env:
           MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+
+      # 新增：使用 rcedit 替换 exe 图标（仅在 push 到 master 时执行，避免 PR 浪费资源）
+      - name: Install Wine and rcedit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine wine32 wine64
+          # 下载 rcedit
+          wget https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe
+          chmod +x rcedit-x64.exe
+
+      - name: Replace exe icon with rcedit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          # 找到生成的 exe 文件（只有一个）
+          EXE_FILE=$(ls HMCL/build/libs/ZPCH-*.exe | head -n 1)
+          if [ -z "$EXE_FILE" ]; then
+            echo "未找到 exe 文件，跳过图标替换"
+            exit 0
+          fi
+          # 检查图标文件是否存在（请将你的图标放在仓库根目录 image/hmcl.ico）
+          ICON_FILE="image/hmcl.ico"
+          if [ ! -f "$ICON_FILE" ]; then
+            echo "警告：图标文件 $ICON_FILE 不存在，跳过替换"
+            exit 0
+          fi
+          # 使用 wine 运行 rcedit
+          wine rcedit-x64.exe "$EXE_FILE" --set-icon "$ICON_FILE"
+          echo "图标替换完成"
+
       - name: Get short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       - name: Rename artifacts
         run: |
           cd HMCL/build/libs/
@@ -49,24 +81,28 @@ jobs:
               mv "$file" "$newname"
             fi
           done
+
       - name: Upload JAR
         uses: actions/upload-artifact@v7
         with:
           name: ZPCH-${{ env.SHORT_SHA }}-jar
           path: HMCL/build/libs/ZPCH-*.jar
           archive: false
+
       - name: Upload EXE
         uses: actions/upload-artifact@v7
         with:
           name: ZPCH-${{ env.SHORT_SHA }}-exe
           path: HMCL/build/libs/ZPCH-*.exe
           archive: false
+
       - name: Upload SH
         uses: actions/upload-artifact@v7
         with:
           name: ZPCH-${{ env.SHORT_SHA }}-sh
           path: HMCL/build/libs/ZPCH-*.sh
           archive: false
+
       - name: Upload DEB
         uses: actions/upload-artifact@v7
         with:
