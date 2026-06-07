@@ -71,7 +71,7 @@ public final class RemoteModpackPage extends ModpackPage {
                     new Validator(i18n("install.new_game.malformed"), HMCLGameRepository::isValidVersionId));
         }
 
-        btnDescription.setVisible(StringUtils.isNotBlank(manifest.getDescription()));
+        // btnDescription.setVisible(StringUtils.isNotBlank(manifest.getDescription()));
     }
 
     @Override

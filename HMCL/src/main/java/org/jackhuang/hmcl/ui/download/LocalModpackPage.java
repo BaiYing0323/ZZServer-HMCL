@@ -78,7 +78,7 @@ public final class LocalModpackPage extends ModpackPage {
             });
         }
 
-        btnDescription.setVisible(false);
+        // btnDescription.setVisible(false);
 
         Path selectedFile;
         Path filePath = controller.getSettings().get(MODPACK_FILE);
@@ -136,7 +136,7 @@ public final class LocalModpackPage extends ModpackPage {
                             txtModpackName.setText(manifest.getName().trim());
                         }
 
-                        btnDescription.setVisible(StringUtils.isNotBlank(manifest.getDescription()));
+                        // btnDescription.setVisible(StringUtils.isNotBlank(manifest.getDescription()));
                     }
                 }).start();
     }
