@@ -65,14 +65,12 @@ jobs:
       - name: Replace exe icon with rcedit
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
-          # 找到生成的 exe 文件（只有一个）
           EXE_FILE=$(ls HMCL/build/libs/ZPCH-*.exe | head -n 1)
           if [ -z "$EXE_FILE" ]; then
             echo "未找到 exe 文件，跳过图标替换"
             exit 0
           fi
-          # 检查图标文件是否存在（请将你的图标放在仓库根目录 image/hmcl.ico）
-          ICON_FILE="image/hmcl.ico"
+          ICON_FILE="HMCL/image/hmcl.ico"
           if [ ! -f "$ICON_FILE" ]; then
             echo "警告：图标文件 $ICON_FILE 不存在，跳过替换"
             exit 0
