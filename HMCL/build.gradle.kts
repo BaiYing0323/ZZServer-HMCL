@@ -25,30 +25,40 @@ plugins {
 val projectConfig = PropertiesUtils.load(rootProject.file("config/project.properties").toPath())
 
 val isOfficial = JenkinsUtils.IS_ON_CI || GitHubActionUtils.IS_ON_OFFICIAL_REPO
+// 可设置环境变量 ZPCH_OFFICIAL=true 强制视为正式构建
+val isZpchOffice = System.getenv("ZPCH_OFFICIAL")?.equals("true", ignoreCase = true) == true || isOfficial
 
-val versionType = System.getenv("VERSION_TYPE") ?: if (isOfficial) "nightly" else "unofficial"
-val versionRoot = System.getenv("VERSION_ROOT") ?: projectConfig.getProperty("versionRoot") ?: "3"
+// versionType: 正式构建为 zpchoffice，否则为 zpchdev
+val versionType = if (isZpchOffice) "zpchoffice" else "zpchdev"
+
+// 版本根从 1 开始（原默认 3）
+val versionRoot = System.getenv("VERSION_ROOT") ?: projectConfig.getProperty("versionRoot") ?: "1"
 
 val microsoftAuthId = System.getenv("MICROSOFT_AUTH_ID") ?: ""
 val curseForgeApiKey = System.getenv("CURSEFORGE_API_KEY") ?: ""
 
 val launcherExe = System.getenv("HMCL_LAUNCHER_EXE") ?: ""
 
+// version 计算逻辑
 val buildNumber = System.getenv("BUILD_NUMBER")?.toInt()
-if (buildNumber != null) {
-    version = if (JenkinsUtils.IS_ON_CI && versionType == "dev") {
-        "$versionRoot.0.$buildNumber"
-    } else {
+version = if (buildNumber != null) {
+    // 有构建编号
+    if (isZpchOffice) {
         "$versionRoot.$buildNumber"
+    } else {
+        "$versionRoot.$buildNumber-Dev"
     }
 } else {
+    // 无构建编号（本地开发）
     val shortCommit = System.getenv("GITHUB_SHA")?.lowercase()?.substring(0, 7)
-    version = if (shortCommit.isNullOrBlank()) {
-        "$versionRoot.SNAPSHOT"
-    } else if (isOfficial) {
-        "$versionRoot.dev-$shortCommit"
+    if (shortCommit.isNullOrBlank()) {
+        if (isZpchOffice) "$versionRoot.SNAPSHOT" else "$versionRoot.SNAPSHOT-Dev"
     } else {
-        "$versionRoot.unofficial-$shortCommit"
+        if (isZpchOffice) {
+            "$versionRoot.dev-$shortCommit"
+        } else {
+            "$versionRoot.dev-$shortCommit-Dev"
+        }
     }
 }
 
@@ -209,7 +219,7 @@ tasks.shadowJar {
     }
 
     manifest.attributes(
-        "Created-By" to "Copyright(c) 2013-2025 huangyuhui.",
+        "Created-By" to "Copyright(c) 2013-2025 huangyuhui.(secondary creation by BaiYing0323)",
         "Implementation-Version" to project.version.toString(),
         "Main-Class" to "org.jackhuang.hmcl.Main",
         "Multi-Release" to "true",
@@ -289,9 +299,8 @@ val makeDeb by tasks.registering(CreateDeb::class) {
     val debFile = layout.file(provider { artifactFile("deb") })
 
     val debChannel = when (versionType) {
-        "stable" -> ReleaseType.STABLE
-        "dev" -> ReleaseType.DEVELOPMENT
-        else -> ReleaseType.NIGHTLY
+        "zpchoffice" -> ReleaseType.STABLE   // 正式版视为 stable
+        else -> ReleaseType.NIGHTLY          // 开发版视为 nightly
     }
 
     version.set(project.version.toString())
@@ -414,7 +423,8 @@ val upgradeTerracottaConfig = tasks.register<TerracottaConfigUpgradeTask>("upgra
     )
 
     version.set(libs.versions.terracotta)
-    downloadURL.set($$"https://github.com/burningtnt/Terracotta/releases/download/v${version}/terracotta-${version}-${classifier}-pkg.tar.gz")
+    // 修复：将 ${classifier} 改为 {classifier} 字面量，由任务在运行时替换
+    downloadURL.set("https://github.com/burningtnt/Terracotta/releases/download/v${version}/terracotta-${version}-{classifier}-pkg.tar.gz")
 
     templateFile.set(source)
     outputFile.set(destination)
