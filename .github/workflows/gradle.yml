@@ -31,7 +31,27 @@ jobs:
           MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
 
-      # 新增：使用 rcedit 替换 exe 图标（仅在 push 到 master 时执行，避免 PR 浪费资源）
+      - name: Get short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Rename artifacts
+        run: |
+          cd HMCL/build/libs/
+          for file in ZPCH-*.jar ZPCH-*.exe ZPCH-*.sh ZPCH-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^ZPCH-/ZPCH-/')
+              if [ "$file" != "$newname" ]; then
+                mv "$file" "$newname"
+              fi
+            fi
+          done
+          for file in HMCL-*.jar HMCL-*.exe HMCL-*.sh HMCL-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^HMCL-/ZPCH-/')
+              mv "$file" "$newname"
+            fi
+          done
+
       - name: Install Wine and rcedit
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
@@ -60,27 +80,6 @@ jobs:
           # 使用 wine 运行 rcedit
           wine rcedit-x64.exe "$EXE_FILE" --set-icon "$ICON_FILE"
           echo "图标替换完成"
-
-      - name: Get short SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
-
-      - name: Rename artifacts
-        run: |
-          cd HMCL/build/libs/
-          for file in ZPCH-*.jar ZPCH-*.exe ZPCH-*.sh ZPCH-*.deb; do
-            if [ -f "$file" ]; then
-              newname=$(echo "$file" | sed 's/^ZPCH-/ZPCH-/')
-              if [ "$file" != "$newname" ]; then
-                mv "$file" "$newname"
-              fi
-            fi
-          done
-          for file in HMCL-*.jar HMCL-*.exe HMCL-*.sh HMCL-*.deb; do
-            if [ -f "$file" ]; then
-              newname=$(echo "$file" | sed 's/^HMCL-/ZPCH-/')
-              mv "$file" "$newname"
-            fi
-          done
 
       - name: Upload JAR
         uses: actions/upload-artifact@v7
