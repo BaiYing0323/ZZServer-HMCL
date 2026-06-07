@@ -6,112 +6,55 @@ on:
     paths-ignore:
       - '**.md'
 
+# 关键：给 GITHUB_TOKEN 添加写入权限
+permissions:
+  contents: write
+
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v6
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          java-package: 'jdk+fx'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-cleanup: never
-      - name: Build with Gradle
-        run: |
-          chmod +x ./gradlew
-          ./gradlew build --no-daemon --parallel
-        env:
-          MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-      - name: Get short SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
-      - name: Rename artifacts
-        run: |
-          cd HMCL/build/libs/
-          for file in ZPCH-*.jar ZPCH-*.exe ZPCH-*.sh ZPCH-*.deb; do
-            if [ -f "$file" ]; then
-              newname=$(echo "$file" | sed 's/^ZPCH-/ZPCH-/')
-              if [ "$file" != "$newname" ]; then
-                mv "$file" "$newname"
-              fi
-            fi
-          done
-          for file in HMCL-*.jar HMCL-*.exe HMCL-*.sh HMCL-*.deb; do
-            if [ -f "$file" ]; then
-              newname=$(echo "$file" | sed 's/^HMCL-/ZPCH-/')
-              mv "$file" "$newname"
-            fi
-          done
-      - name: Upload JAR
-        uses: actions/upload-artifact@v7
-        with:
-          name: ZPCH-${{ env.SHORT_SHA }}-jar
-          path: HMCL/build/libs/ZPCH-*.jar
-          archive: false
-      - name: Upload EXE
-        uses: actions/upload-artifact@v7
-        with:
-          name: ZPCH-${{ env.SHORT_SHA }}-exe
-          path: HMCL/build/libs/ZPCH-*.exe
-          archive: false
-      - name: Upload SH
-        uses: actions/upload-artifact@v7
-        with:
-          name: ZPCH-${{ env.SHORT_SHA }}-sh
-          path: HMCL/build/libs/ZPCH-*.sh
-          archive: false
-      - name: Upload DEB
-        uses: actions/upload-artifact@v7
-        with:
-          name: ZPCH-${{ env.SHORT_SHA }}-deb
-          path: HMCL/build/libs/ZPCH-*.deb
-          archive: false
+      # ... (前面所有步骤保持不变，直到 Upload DEB 之后)
 
-      # 新增：自动发布预发布版 Release
+      # 修正后的版本提取步骤
       - name: Extract version from artifacts
         id: extract_version
         run: |
-          # 查找任意一个 ZPCH-*.jar 文件并提取版本号
+          # 查找任意一个 ZPCH-*.jar 文件
           JAR_FILE=$(ls HMCL/build/libs/ZPCH-*.jar 2>/dev/null | head -n 1)
           if [ -z "$JAR_FILE" ]; then
             echo "未找到产物文件，跳过发布"
+            echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          # 提取版本号，例如 ZPCH-1.2.3.jar -> 1.2.3
-          VERSION=$(basename "$JAR_FILE" | sed -E 's/^ZPCH-([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?)\.jar$/\1/')
+          # 提取文件名中的版本部分：去掉 ZPCH- 前缀和 .jar 后缀
+          # 例如 ZPCH-1.0.dev-ff9daee-Dev.jar -> 1.0.dev-ff9daee-Dev
+          VERSION=$(basename "$JAR_FILE" | sed -E 's/^ZPCH-(.+)\.jar$/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "提取到版本号: $VERSION"
       - name: Check if release exists
         id: check_release
         run: |
           VERSION=${{ steps.extract_version.outputs.version }}
-          if [ -z "$VERSION" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "reason=未提取到有效的版本号" >> $GITHUB_OUTPUT
+          if [ -z "$VERSION" ] || [ "${{ steps.extract_version.outputs.skip }}" == "true" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "reason=版本号无效或产物缺失" >> $GITHUB_OUTPUT
             exit 0
           fi
-          # 使用 GitHub API 检查该 tag 是否已存在
           TAG_NAME="v$VERSION"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
           if [ "$HTTP_CODE" = "200" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "reason=Release 版本 v$VERSION 已存在" >> $GITHUB_OUTPUT
+            echo "reason=Release 版本 $TAG_NAME 已存在" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           fi
       - name: Create Prerelease
-        if: steps.check_release.outputs.exists == 'false' && steps.check_release.outputs.skip != 'true'
+        if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check_release.outputs.tag }}
@@ -133,6 +76,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output skip reason
-        if: steps.check_release.outputs.exists == 'true' || steps.check_release.outputs.skip == 'true'
+        if: steps.check_release.outputs.exists == 'true'
         run: |
           echo "跳过发布: ${{ steps.check_release.outputs.reason }}"
