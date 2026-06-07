@@ -401,7 +401,7 @@ public final class Config extends ObservableSetting {
     }
 
     @SerializedName("titleTransparent")
-    private final BooleanProperty titleTransparent = new SimpleBooleanProperty(false);
+    private final BooleanProperty titleTransparent = new SimpleBooleanProperty(true);
 
     public BooleanProperty titleTransparentProperty() {
         return titleTransparent;

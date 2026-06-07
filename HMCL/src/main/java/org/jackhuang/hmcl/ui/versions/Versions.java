@@ -213,10 +213,17 @@ public final class Versions {
         };
     }
 
-    //【禁用：正式启动游戏】
     @SafeVarargs
     public static void launch(Profile profile, String id, Consumer<LauncherHelper>... injecters) {
-        return;
+        if (!checkVersionForLaunching(profile, id))
+            return;
+        ensureSelectedAccount(account -> {
+            LauncherHelper launcherHelper = new LauncherHelper(profile, account, id);
+            for (Consumer<LauncherHelper> injecter : injecters) {
+                injecter.accept(launcherHelper);
+            }
+            launcherHelper.launch();
+        });
     }
 
     //【禁用：测试游戏】
@@ -235,19 +242,8 @@ public final class Versions {
     }
 
     private static boolean checkVersionForLaunching(Profile profile, String id) {
-        if (id == null || !profile.getRepository().isLoaded() || !profile.getRepository().hasVersion(id)) {
-            JFXButton gotoDownload = new JFXButton(i18n("version.empty.launch.goto_download"));
-            gotoDownload.getStyleClass().add("dialog-accept");
-            gotoDownload.setOnAction(e -> Controllers.navigate(Controllers.getDownloadPage()));
-
-            Controllers.confirmAction(i18n("version.empty.launch"), i18n("launch.failed"),
-                    MessageDialogPane.MessageType.ERROR,
-                    gotoDownload,
-                    null);
-            return false;
-        } else {
-            return true;
-        }
+        // 空实现：直接返回 true（不做任何检查、不弹任何提示）
+        return true;
     }
 
     private static void ensureSelectedAccount(Consumer<Account> action) {

@@ -115,7 +115,10 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
         FXUtils.smoothScrolling(scrollPane);
         rootPane.getStyleClass().add("card-list");
 
+        // [MODIFIED] 全局设置模式下，原本有一个提示跳转到特定版本设置的链接，现已移除
         if (globalSetting) {
+            // 以下代码已注释，因为对应的功能（Versions.modifyGameSettings）已被禁用
+            /*
             HintPane specificSettingsHint = new HintPane(MessageDialogPane.MessageType.WARNING);
             Text text = new Text();
             text.textProperty().bind(BindingMapping.of(selectedVersion)
@@ -129,7 +132,9 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             specificSettingsHint.visibleProperty().bind(navigateToSpecificSettings);
 
             rootPane.getChildren().addAll(specificSettingsHint);
+            */
         } else {
+            // [MODIFIED] 非全局模式下，移除“编辑全局设置”按钮
             BorderPane settingsTypePane = new BorderPane();
             settingsTypePane.disableProperty().bind(modpack);
             rootPane.getChildren().add(settingsTypePane);
@@ -140,11 +145,14 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             enableSpecificCheckBox.setText(i18n("settings.type.special.enable"));
             BorderPane.setAlignment(enableSpecificCheckBox, Pos.CENTER_RIGHT);
 
+            // 以下按钮对应的 Versions.modifyGlobalSettings 已被禁用，故注释掉
+            /*
             JFXButton editGlobalSettingsButton = FXUtils.newRaisedButton(i18n("settings.type.global.edit"));
             settingsTypePane.setRight(editGlobalSettingsButton);
             editGlobalSettingsButton.disableProperty().bind(enableSpecificCheckBox.selectedProperty());
             BorderPane.setAlignment(editGlobalSettingsButton, Pos.CENTER_RIGHT);
             editGlobalSettingsButton.setOnAction(e -> editGlobalSettings());
+            */
         }
 
         {
@@ -258,14 +266,14 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
                     Label lblAllocateMemory = new Label();
                     lblAllocateMemory.textProperty().bind(Bindings.createStringBinding(() -> {
                         PhysicalMemoryStatus memoryStatus = memoryStatusBar.getMemoryStatus();
-                        long maxMemory = Lang.parseInt(this.maxMemory.get(), 0) * 1024L * 1024L;
+                        long maxMemory = Lang.parseInt(VersionSettingsPage.this.maxMemory.get(), 0) * 1024L * 1024L;
                         return i18n(memoryStatus.hasAvailable() && maxMemory > memoryStatus.getAvailable()
                                         ? (chkAutoAllocate.isSelected() ? "settings.memory.allocate.auto.exceeded" : "settings.memory.allocate.manual.exceeded")
                                         : (chkAutoAllocate.isSelected() ? "settings.memory.allocate.auto" : "settings.memory.allocate.manual"),
                                 GIGABYTES.convertFromBytes(maxMemory),
                                 GIGABYTES.convertFromBytes(HMCLGameRepository.getAllocatedMemory(maxMemory, memoryStatus.getAvailable(), chkAutoAllocate.isSelected())),
                                 GIGABYTES.convertFromBytes(memoryStatus.getAvailable()));
-                    }, memoryStatusBar.memoryStatusProperty(), maxMemory, chkAutoAllocate.selectedProperty()));
+                    }, memoryStatusBar.memoryStatusProperty(), VersionSettingsPage.this.maxMemory, chkAutoAllocate.selectedProperty()));
                     lblAllocateMemory.getStyleClass().add("memory-label");
                     digitalPane.setRight(lblAllocateMemory);
                 }
@@ -554,11 +562,13 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
     }
 
     private void editSpecificSettings() {
-        Versions.modifyGameSettings(profile, profile.getSelectedVersion());
+        // 功能已禁用，保留空方法以避免编译错误
+        // Versions.modifyGameSettings(profile, profile.getSelectedVersion());
     }
 
     private void editGlobalSettings() {
-        Versions.modifyGlobalSettings(profile);
+        // 功能已禁用，保留空方法以避免编译错误
+        // Versions.modifyGlobalSettings(profile);
     }
 
     private static List<String> getSupportedResolutions() {

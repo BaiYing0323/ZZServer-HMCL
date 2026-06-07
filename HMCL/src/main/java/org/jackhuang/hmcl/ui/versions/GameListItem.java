@@ -36,32 +36,33 @@ public class GameListItem extends GameItem {
         return selected;
     }
 
+    // 以下方法原先调用 Versions 中已禁用的功能，现改为空实现（按钮仍可见但点击无效果）
     public void rename() {
-        Versions.renameVersion(profile, id);
+        // 功能已禁用
     }
 
     public void duplicate() {
-        Versions.duplicateVersion(profile, id);
+        // 功能已禁用
     }
 
     public void remove() {
-        Versions.deleteVersion(profile, id);
+        // 功能已禁用
     }
 
     public void export() {
-        Versions.exportVersion(profile, id);
+        // 功能已禁用
     }
 
     public void browse() {
-        Versions.openFolder(profile, id);
+        // 功能已禁用
     }
 
     public void testGame() {
-        Versions.testGame(profile, id);
+        // 功能已禁用
     }
 
     public void launch() {
-        Versions.launch(profile, id);
+        // 功能已禁用
     }
 
     public void modifyGameSettings() {
@@ -69,7 +70,7 @@ public class GameListItem extends GameItem {
     }
 
     public void generateLaunchScript() {
-        Versions.generateLaunchScript(profile, id);
+        // 功能已禁用
     }
 
     public boolean canUpdate() {

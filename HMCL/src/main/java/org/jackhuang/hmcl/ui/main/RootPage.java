@@ -31,6 +31,7 @@ import org.jackhuang.hmcl.setting.Profile;
 import org.jackhuang.hmcl.setting.Profiles;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.task.Task;
+import org.jackhuang.hmcl.terracotta.TerracottaMetadata;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
@@ -54,9 +55,11 @@ import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.TaskCancellationAction;
 import org.jackhuang.hmcl.util.io.CompressingUtils;
 import org.jackhuang.hmcl.util.io.FileUtils;
-// 新增导入VersionNumber，解决找不到符号
+import org.jackhuang.hmcl.util.platform.*;
 import org.jackhuang.hmcl.util.versioning.VersionNumber;
 
+import java.awt.*;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -89,9 +92,8 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
         return getMainPage().stateProperty();
     }
 
-    // 返回父类
     @Override
-    protected DecoratorAnimatedPageSkin<RootPage> createDefaultSkin() {
+    protected Skin createDefaultSkin() {
         return new Skin(this);
     }
 
@@ -146,13 +148,13 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
         protected Skin(RootPage control) {
             super(control);
 
-            // 账户项
+            // 账户按钮
             AccountAdvancedListItem accountListItem = new AccountAdvancedListItem();
             accountListItem.setOnAction(e -> Controllers.navigate(Controllers.getAccountListPage()));
             FXUtils.onSecondaryButtonClicked(accountListItem, () -> AccountListPopupMenu.show(accountListItem, JFXPopup.PopupVPosition.TOP, JFXPopup.PopupHPosition.LEFT, accountListItem.getWidth(), 0));
             accountListItem.accountProperty().bind(Accounts.selectedAccountProperty());
 
-            // 游戏版本项
+            // 实例管理按钮：点击进入当前所选实例的管理界面
             GameAdvancedListItem gameListItem = new GameAdvancedListItem();
             gameListItem.setOnAction(e -> {
                 Profile profile = Profiles.getSelectedProfile();
@@ -172,20 +174,39 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
             }
             FXUtils.onSecondaryButtonClicked(gameListItem, () -> showGameListPopupMenu(gameListItem));
 
-            // 游戏管理
-            AdvancedListItem gameItem = new AdvancedListItem();
-            gameItem.setLeftIcon(SVG.FORMAT_LIST_BULLETED);
-            gameItem.setTitle(i18n("version.manage"));
-            gameItem.setOnAction(e -> Controllers.navigate(Controllers.getGameListPage()));
-            FXUtils.onSecondaryButtonClicked(gameItem, () -> showGameListPopupMenu(gameItem));
+            // 下载按钮
+            AdvancedListItem downloadItem = new AdvancedListItem();
+            downloadItem.setLeftIcon(SVG.DOWNLOAD);
+            downloadItem.setTitle(i18n("download"));
+            downloadItem.setOnAction(e -> {
+                Controllers.getDownloadPage().showGameDownloads();
+                Controllers.navigate(Controllers.getDownloadPage());
+            });
+            if (AnimationUtils.isAnimationEnabled()) {
+                FXUtils.prepareOnMouseEnter(downloadItem, Controllers::prepareDownloadPage);
+            }
 
-            // 左侧导航栏
+            // QQ 群按钮
+            AdvancedListItem qqGroupItem = new AdvancedListItem();
+            qqGroupItem.setLeftIcon(SVG.CHAT);
+            qqGroupItem.setTitle("加入服务器QQ群");
+            qqGroupItem.setOnAction(e -> {
+                try {
+                    Desktop.getDesktop().browse(new URI("https://qm.qq.com/q/Efs5a38CZO"));
+                } catch (Exception ex) {
+                    LOG.warning("无法打开QQ群链接", ex);
+                }
+            });
+
+            // 侧边栏
             AdvancedListBox sideBar = new AdvancedListBox()
                     .startCategory(i18n("account").toUpperCase(Locale.ROOT))
                     .add(accountListItem)
                     .startCategory(i18n("version").toUpperCase(Locale.ROOT))
                     .add(gameListItem)
-                    .add(gameItem);
+                    .add(downloadItem)
+                    .startCategory(i18n("settings.launcher.general").toUpperCase(Locale.ROOT))
+                    .add(qqGroupItem);
 
             setLeft(sideBar);
             setCenter(getSkinnable().getMainPage());

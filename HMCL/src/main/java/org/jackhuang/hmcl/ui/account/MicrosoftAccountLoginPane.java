@@ -333,4 +333,3 @@ public class MicrosoftAccountLoginPane extends JFXDialogLayout implements Dialog
     }
 
 }
-

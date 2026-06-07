@@ -18,6 +18,7 @@
 package org.jackhuang.hmcl.theme;
 
 import com.sun.jna.Pointer;
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -189,11 +190,8 @@ public final class Themes {
     }
 
     private static final ObjectBinding<Color> titleFill = Bindings.createObjectBinding(
-            () -> config().isTitleTransparent()
-                    ? getColorScheme().getOnSurface()
-                    : getColorScheme().getOnPrimaryContainer(),
-            colorSchemeProperty(),
-            config().titleTransparentProperty()
+            () -> getColorScheme().getOnSurface(),  // 返回透明颜色
+            colorSchemeProperty()
     );
 
     public static ObservableValue<Color> titleFillProperty() {

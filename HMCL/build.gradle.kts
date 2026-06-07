@@ -25,16 +25,16 @@ plugins {
 val projectConfig = PropertiesUtils.load(rootProject.file("config/project.properties").toPath())
 
 val isOfficial = JenkinsUtils.IS_ON_CI || GitHubActionUtils.IS_ON_OFFICIAL_REPO
-// 可设置环境变量 ZPCH_OFFICIAL=true 强制视为正式构建
+
 val isZpchOffice = System.getenv("ZPCH_OFFICIAL")?.equals("true", ignoreCase = true) == true || isOfficial
 
-// versionType: 正式构建为 zpchoffice，否则为 zpchdev
+
 val versionType = if (isZpchOffice) "zpchoffice" else "zpchdev"
 
-// 版本根从 1 开始（原默认 3）
+
 val versionRoot = System.getenv("VERSION_ROOT") ?: projectConfig.getProperty("versionRoot") ?: "1"
 
-val microsoftAuthId = System.getenv("MICROSOFT_AUTH_ID") ?: ""
+val microsoftAuthId = "6a3728d6-27a3-4180-99bb-479895b8f88e"
 val curseForgeApiKey = System.getenv("CURSEFORGE_API_KEY") ?: ""
 
 val launcherExe = System.getenv("HMCL_LAUNCHER_EXE") ?: ""
