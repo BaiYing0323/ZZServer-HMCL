@@ -1,0 +1,110 @@
+name: Java CI (Manual Release)
+
+on:
+  workflow_dispatch:
+  # 允许手动触发，分支可选
+
+jobs:
+  build:
+    # 仅当触发者是仓库所有者时才运行
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          java-package: 'jdk+fx'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: never
+
+      - name: Build with Gradle (Official Release)
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build --no-daemon --parallel
+        env:
+          ZPCH_OFFICIAL: true
+          BUILD_NUMBER: ${{ github.run_number }}
+          MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          # 可选：签名密钥（正式版建议提供）
+          HMCL_SIGNATURE_KEY: ${{ secrets.HMCL_SIGNATURE_KEY }}
+
+      - name: Get short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Rename artifacts
+        run: |
+          cd HMCL/build/libs/
+          for file in ZPCH-*.jar ZPCH-*.exe ZPCH-*.sh ZPCH-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^ZPCH-/ZPCH-/')
+              if [ "$file" != "$newname" ]; then
+                mv "$file" "$newname"
+              fi
+            fi
+          done
+          for file in HMCL-*.jar HMCL-*.exe HMCL-*.sh HMCL-*.deb; do
+            if [ -f "$file" ]; then
+              newname=$(echo "$file" | sed 's/^HMCL-/ZPCH-/')
+              mv "$file" "$newname"
+            fi
+          done
+
+      - name: Install Wine and rcedit
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y wine wine32 wine64
+          wget https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe
+          chmod +x rcedit-x64.exe
+
+      - name: Replace exe icon with rcedit
+        run: |
+          EXE_FILE=$(ls HMCL/build/libs/ZPCH-*.exe | head -n 1)
+          if [ -z "$EXE_FILE" ]; then
+            echo "未找到 exe 文件，跳过图标替换"
+            exit 0
+          fi
+          ICON_FILE="HMCL/image/hmcl.ico"
+          if [ ! -f "$ICON_FILE" ]; then
+            echo "警告：图标文件 $ICON_FILE 不存在，跳过替换"
+            exit 0
+          fi
+          wine rcedit-x64.exe "$EXE_FILE" --set-icon "$ICON_FILE"
+          echo "图标替换完成"
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZPCH-${{ env.SHORT_SHA }}-jar
+          path: HMCL/build/libs/ZPCH-*.jar
+          archive: false
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZPCH-${{ env.SHORT_SHA }}-exe
+          path: HMCL/build/libs/ZPCH-*.exe
+          archive: false
+
+      - name: Upload SH
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZPCH-${{ env.SHORT_SHA }}-sh
+          path: HMCL/build/libs/ZPCH-*.sh
+          archive: false
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZPCH-${{ env.SHORT_SHA }}-deb
+          path: HMCL/build/libs/ZPCH-*.deb
+          archive: false
